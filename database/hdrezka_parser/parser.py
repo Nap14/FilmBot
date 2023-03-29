@@ -1,7 +1,7 @@
 from datetime import datetime
 from abc import abstractmethod
 
-from hdrezka_parser.request import get_request_data, get_soup, get_trailer_url
+from hdrezka_parser.request import get_request_config, get_soup, get_trailer_url
 
 
 class Page:
@@ -10,7 +10,7 @@ class Page:
     def __init__(self, id_):
         self.id = id_
         self._url = self.BASE_URL.format(self.id)
-        self._headers = get_request_data()["headers"]
+        self._headers = get_request_config()["headers"]
         self.page = get_soup(self._url, headers=self._headers)
 
     @abstractmethod
