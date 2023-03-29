@@ -1,6 +1,8 @@
+import datetime
 import json
 
 import colorama
+from django.db.models import Q
 from winsound import Beep
 from time import sleep
 
@@ -13,54 +15,71 @@ from db.models import MovieMaker, Profession, Genre, Dubbing, Film
 from hdrezka_parser.parser import Maker
 
 
-def add_movie_maker_to_database(movie_maker: dict):
+def add_movie_maker_to_database(movie_maker: dict, save: bool = True):
+    """
+    Add a new MovieMaker object to the database based on the given dictionary.
+    Return the newly created object.
+    """
 
-    movie_maker["profession"] = [
-        "актер" if prof == "актриса" else prof for prof in movie_maker["profession"]
-    ]
+    # Map "актриса" to "актер" in the profession list
+    movie_maker["profession"] = [p if p != "актриса" else "актер" for p in movie_maker["profession"]]
 
+    # Fix birthdate format if needed
     if movie_maker["birth_date"]:
-        birth_date = movie_maker["birth_date"].split("-")
+        birth_date_parts = movie_maker["birth_date"].split("-")
         for i in range(3):
-            if not int(birth_date[i]):
-                birth_date[i] = birth_date[i].replace("0", "1", 1)
+            if not int(birth_date_parts[i]):
+                birth_date_parts[i] = birth_date_parts[i].replace("0", "1", 1)
+        movie_maker["birth_date"] = "-".join(birth_date_parts)
 
-        movie_maker["birth_date"] = "-".join(birth_date)
+    # Get Profession objects for the given profession names
+    profession_names = movie_maker.pop("profession")
+    professions = Profession.objects.filter(name__in=profession_names)
 
-    professions = Profession.objects.filter(name__in=movie_maker["profession"])
+    # Create and save new MovieMaker object
+    movie_maker_obj = MovieMaker(**movie_maker)
+    if save:
+        movie_maker_obj.save()
 
-    del movie_maker["profession"]
+        # Add Profession objects to MovieMaker object
+        movie_maker_obj.profession.set(professions)
 
-    m = MovieMaker.objects.create(**movie_maker)
+        print(colorama.Fore.WHITE + f"{movie_maker_obj} was added")
 
-    [m.profession.add(prof) for prof in professions]
-    m.save()
-
-    print(colorama.Fore.WHITE + f"{m} was added")
-
-    return m
+    return movie_maker_obj
 
 
 def get_dubbing(dubbings: list) -> [Dubbing]:
-    result = []
+    """
+    Retrieve existing Dubbing objects from the database based on the given list of names.
+    Create and retrieve any new Dubbing objects and return the complete list of objects.
+    """
 
     if not dubbings:
         return []
 
-    for dub in dubbings:
-        try:
-            dubbing = Dubbing.objects.get(name=dub)
-        except ObjectDoesNotExist:
-            dubbing = Dubbing.objects.create(name=dub)
-            print(f"Dubbing {dubbing.name}, was added")
+    # Retrieve existing Dubbing objects from the database
+    existing_dubbings = Dubbing.objects.filter(name__in=dubbings)
 
-        result.append(dubbing)
+    if len(existing_dubbings) == len(dubbings):
+        return existing_dubbings
 
-    return result
+    # Identify any names not found in existing Dubbing objects
+    existing_names = set(existing_dubbings.values_list('name', flat=True))
+    new_names = list(set(dubbings) - existing_names)
+
+    # Create new Dubbing objects for any names not found in existing Dubbing objects
+    new_dubbings = [Dubbing(name=name) for name in new_names]
+    Dubbing.objects.bulk_create(new_dubbings)
+
+    # Retrieve all Dubbing objects (including newly created objects)
+    all_dubbings = Dubbing.objects.filter(Q(name__in=existing_names) | Q(name__in=new_names))
+
+    return all_dubbings
 
 
 # использовать когда парсятся фильмы та актёры и продюсеры это словари
-def get_movie_makers_from_film_page(makers: dict):
+def get_movie_makers_from_film_page(makers: [dict]):
     result = []
 
     for maker in makers:
@@ -73,19 +92,37 @@ def get_movie_makers_from_film_page(makers: dict):
     return result
 
 
-def get_movie_makers(ex_ids: [int]):
-    result = []
-    for id_ in ex_ids:
-        try:
-            m = MovieMaker.objects.get(external_id=id_)
-        except ObjectDoesNotExist:
-            movie_maker = Maker(id_).parse_page()
-            m = add_movie_maker_to_database(movie_maker)
+def get_movie_makers(external_ids: [int]):
+    """
+    Retrieve existing MovieMaker objects from the database based on the given list of external IDs.
+    Create and retrieve any new Movie objects and return the complete list of objects.
+    """
+
+    # Retrieve existing Movie objects from the database
+    existing_makers = MovieMaker.objects.filter(external_id__in=external_ids)
+
+    if len(existing_makers) == len(external_ids):
+        return existing_makers
+
+    # Identify any external IDs not found in existing Movie objects
+    existing_ids = set(existing_makers.values_list('external_id', flat=True))
+    new_ids = list(set(external_ids) - existing_ids)
+    new_makers = []
+
+    # Create new Movie objects for any external IDs not found in existing Movie objects
+    for id_ in new_ids:
+        movie = Maker(id_).parse_page()
+        if movie:
+            m = add_movie_maker_to_database(movie, save=False)
             sleep(1)
+            new_makers.append(m)
 
-        result.append(m)
+    new_makers = MovieMaker.objects.bulk_create(new_makers)
 
-    return result
+    makers_ids = new_makers.value_list("id", flat=True)
+    makers_ids.extend(existing_makers.values_list("id", flat=True))
+
+    return makers_ids
 
 
 def add_film(film):
