@@ -9,7 +9,6 @@ from db.models import Film
 
 
 class FilmBot:
-
     def __init__(self, token, chat_id):
         self.bot = telebot.TeleBot(token)
         self.chat_id = chat_id
@@ -26,17 +25,14 @@ class FilmBot:
         film = Film.objects.filter(rating__gte=7).order_by("?").first()
         with open("../templates/main.html", "rt", encoding="utf-8") as file:
             template = file.read()
-        actors = [
-            f"#{actor.name.split()[-1]}"
-            for actor in film.actors.all()
-        ]
+        actors = [f"#{actor.name.split()[-1]}" for actor in film.actors.all()]
 
         message = template.format(
             name=film.name,
             release=film.release.year,
             trailer=film.trailer,
             description=film.description,
-            actors=", ".join(actors)
+            actors=", ".join(actors),
         )
 
         self.bot.send_message(test_id, message, parse_mode="HTML")
@@ -48,7 +44,7 @@ class FilmBot:
             schedule.run_pending()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     TOKEN = os.environ.get("BOT_TOKEN")
     films_chat_id = -1001620986020
     test_id = -1001156799972
