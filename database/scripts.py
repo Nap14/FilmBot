@@ -13,7 +13,7 @@ from db.models import MovieMaker, Profession, Genre, Dubbing, Film
 from hdrezka_parser.parser import Maker
 
 
-def add_movie_maker(movie_maker: dict):
+def add_movie_maker_to_database(movie_maker: dict):
 
     movie_maker["profession"] = [
         "актер" if prof == "актриса" else prof for prof in movie_maker["profession"]
@@ -41,6 +41,24 @@ def add_movie_maker(movie_maker: dict):
     return m
 
 
+def get_dubbing(dubbings: list) -> [Dubbing]:
+    result = []
+
+    if not dubbings:
+        return []
+
+    for dub in dubbings:
+        try:
+            dubbing = Dubbing.objects.get(name=dub)
+        except ObjectDoesNotExist:
+            dubbing = Dubbing.objects.create(name=dub)
+            print(f"Dubbing {dubbing.name}, was added")
+
+        result.append(dubbing)
+
+    return result
+
+
 # использовать когда парсятся фильмы та актёры и продюсеры это словари
 def get_movie_makers_from_film_page(makers: dict):
     result = []
@@ -49,7 +67,7 @@ def get_movie_makers_from_film_page(makers: dict):
         try:
             m = MovieMaker.objects.get(external_id=maker["external_id"])
         except ObjectDoesNotExist:
-            m = add_movie_maker(**maker)
+            m = add_movie_maker_to_database(**maker)
         result.append(m)
 
     return result
@@ -62,10 +80,10 @@ def get_movie_makers(ex_ids: [int]):
             m = MovieMaker.objects.get(external_id=id_)
         except ObjectDoesNotExist:
             movie_maker = Maker(id_).parse_page()
-            m = add_movie_maker(movie_maker)
+            m = add_movie_maker_to_database(movie_maker)
             sleep(1)
-        finally:
-            result.append(m)
+
+        result.append(m)
 
     return result
 
@@ -78,11 +96,7 @@ def add_film(film):
 
     directors = get_movie_makers(film["directors"])
 
-    dubbings = (
-        [Dubbing.objects.get(name=dub) for dub in film["dubbing"]]
-        if film["dubbing"]
-        else []
-    )
+    dubbings = get_dubbing(film["dubbing"])
 
     del film["genres"]
     del film["actors"]
@@ -101,18 +115,18 @@ def add_film(film):
     return film
 
 
-def add_films(file):
+def add_films(file, start: int = 0):
     with open(file, "rb") as file:
         films = json.load(file)
 
-    for i, film in list(enumerate(films))[882:]:
+    for i, film in list(enumerate(films))[start:]:
         print("Initialize film #", i)
         add_film(film)
 
 
-def main():
+def add_films_from_file(file: str, *args):
     try:
-        add_films("films2.json")
+        add_films(file, *args)
     except Exception:
         Beep(2500, 1000)
         raise
