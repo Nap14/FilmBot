@@ -2,3 +2,4 @@ develop.py
 db.sqlite3
 films3.json
 main.py
+.idea/
