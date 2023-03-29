@@ -1,4 +1,3 @@
-import datetime
 import json
 
 import colorama
@@ -22,7 +21,9 @@ def add_movie_maker_to_database(movie_maker: dict, save: bool = True):
     """
 
     # Map "актриса" to "актер" in the profession list
-    movie_maker["profession"] = [p if p != "актриса" else "актер" for p in movie_maker["profession"]]
+    movie_maker["profession"] = [
+        p if p != "актриса" else "актер" for p in movie_maker["profession"]
+    ]
 
     # Fix birthdate format if needed
     if movie_maker["birth_date"]:
@@ -45,6 +46,8 @@ def add_movie_maker_to_database(movie_maker: dict, save: bool = True):
         movie_maker_obj.profession.set(professions)
 
         print(colorama.Fore.WHITE + f"{movie_maker_obj} was added")
+    else:
+        print(colorama.Fore.WHITE + f"{movie_maker_obj} was added to queue")
 
     return movie_maker_obj
 
@@ -65,7 +68,7 @@ def get_dubbing(dubbings: list) -> [Dubbing]:
         return existing_dubbings
 
     # Identify any names not found in existing Dubbing objects
-    existing_names = set(existing_dubbings.values_list('name', flat=True))
+    existing_names = set(existing_dubbings.values_list("name", flat=True))
     new_names = list(set(dubbings) - existing_names)
 
     # Create new Dubbing objects for any names not found in existing Dubbing objects
@@ -73,23 +76,41 @@ def get_dubbing(dubbings: list) -> [Dubbing]:
     Dubbing.objects.bulk_create(new_dubbings)
 
     # Retrieve all Dubbing objects (including newly created objects)
-    all_dubbings = Dubbing.objects.filter(Q(name__in=existing_names) | Q(name__in=new_names))
+    all_dubbings = Dubbing.objects.filter(
+        Q(name__in=existing_names) | Q(name__in=new_names)
+    )
 
     return all_dubbings
 
 
 # использовать когда парсятся фильмы та актёры и продюсеры это словари
 def get_movie_makers_from_film_page(makers: [dict]):
-    result = []
+    # Create a list of moviemaker IDs from the given list of dictionaries
+    makers_ids = [maker["external_id"] for maker in makers]
 
-    for maker in makers:
-        try:
-            m = MovieMaker.objects.get(external_id=maker["external_id"])
-        except ObjectDoesNotExist:
-            m = add_movie_maker_to_database(**maker)
-        result.append(m)
+    # Find all moviemakers in the database with an external ID matching one of the IDs in the maker_ids list
+    existing_makers = MovieMaker.objects.filter(external_id__in=makers_ids)
 
-    return result
+    # If all of makers IDs in the list already exist in the database, return a list of their IDs
+    if len(makers) == len(existing_makers):
+        return existing_makers
+
+    # Create a set of existing maker IDs to check against when adding new makers to the database
+    existing_ids = list(existing_makers.values_list("external_id", flat=True))
+
+    # Create a list of new movie makers to add to the database, skipping any makers that already exist
+    new_makers = [
+        add_movie_maker_to_database(maker, save=False)
+        for maker in makers
+        if maker['external_id'] not in existing_ids
+    ]
+
+    # Bulk create new moviemakers in the database and return a list of all maker IDs (existing and new)
+    new_makers = MovieMaker.objects.bulk_create(new_makers)
+    new_ids = [maker.id for maker in new_makers]
+
+    all_ids = list(existing_makers.values_list('id', flat=True)) + new_ids
+    return all_ids
 
 
 def get_movie_makers(external_ids: [int]):
@@ -105,15 +126,15 @@ def get_movie_makers(external_ids: [int]):
         return existing_makers
 
     # Identify any external IDs not found in existing Movie objects
-    existing_ids = set(existing_makers.values_list('external_id', flat=True))
+    existing_ids = set(existing_makers.values_list("external_id", flat=True))
     new_ids = set(map(int, external_ids)) - existing_ids
     new_makers = []
 
     # Create new Movie objects for any external IDs not found in existing Movie objects
     for id_ in new_ids:
-        movie = Maker(id_).parse_page()
-        if movie:
-            m = add_movie_maker_to_database(movie, save=False)
+        maker = Maker(id_).parse_page()
+        if maker:
+            m = add_movie_maker_to_database(maker, save=False)
             sleep(1)
             new_makers.append(m)
             print(f"maker {m.external_id} was add to queue")
@@ -126,24 +147,34 @@ def get_movie_makers(external_ids: [int]):
     return makers_ids
 
 
-def add_film(film):
-    film["release"] = film["release"].split()[0]
+def add_film(film_data):
+    # Split release date string to get only the date
+    film_data["release"] = film_data["release"].split()[0]
 
-    genres = Genre.objects.filter(name__in=film.pop("genres"))
-    actors = get_movie_makers(film.pop("actors"))
-    directors = get_movie_makers(film.pop("directors"))
-    dubbings = get_dubbing(film.pop("dubbing"))
+    # Get Genre objects for each genre name
+    genres = Genre.objects.filter(name__in=film_data.pop("genres"))
 
-    film = Film.objects.create(**film)
+    # Get MovieMaker objects for each actor and director external ID
+    actors = get_movie_makers(film_data.pop("actors"))
+    directors = get_movie_makers(film_data.pop("directors"))
 
-    [film.genres.add(genre) for genre in genres]
-    [film.actors.add(actor) for actor in actors]
-    [film.directors.add(director) for director in directors]
-    [film.dubbing.add(dubbin) for dubbin in dubbings]
+    # Get Dubbing objects for each dubbing language name
+    dubbings = get_dubbing(film_data.pop("dubbing"))
 
-    print(colorama.Fore.CYAN + f"Film {film} was added" + colorama.Style.RESET_ALL)
+    # Create Film object with given data
+    film_obj = Film.objects.create(**film_data)
 
-    return film
+    # Set many-to-many relationships for genres, actors, directors, and dubbings
+    film_obj.genres.set(genres)
+    film_obj.actors.set(actors)
+    film_obj.directors.set(directors)
+    film_obj.dubbing.set(dubbings)
+
+    # Print success message with Film object representation
+    print(colorama.Fore.CYAN + f"Film {film_obj} was added" + colorama.Style.RESET_ALL)
+
+    # Return created Film object
+    return film_obj
 
 
 def add_films(file, start: int = 0):
@@ -151,7 +182,7 @@ def add_films(file, start: int = 0):
         films = json.load(file)
 
     for i, film in list(enumerate(films))[start:]:
-        print("Initialize film #", i)
+        print("Initialize film_data #", i)
         add_film(film)
 
 
@@ -164,5 +195,4 @@ def add_films_from_file(file: str, *args):
 
 
 if __name__ == "__main__":
-    f = Film.objects.all()
-    print(f)
+    pass
