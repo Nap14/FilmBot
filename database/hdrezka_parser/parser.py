@@ -9,9 +9,9 @@ class Page:
 
     def __init__(self, id_):
         self.id = id_
-        self.url = self.BASE_URL.format(self.id)
+        self._url = self.BASE_URL.format(self.id)
         self._headers = get_request_data()["headers"]
-        self.page = get_soup(self.url, headers=self._headers)
+        self.page = get_soup(self._url, headers=self._headers)
 
     @abstractmethod
     def parse_page(self):
