@@ -106,7 +106,7 @@ def get_movie_makers(external_ids: [int]):
 
     # Identify any external IDs not found in existing Movie objects
     existing_ids = set(existing_makers.values_list('external_id', flat=True))
-    new_ids = list(set(external_ids) - existing_ids)
+    new_ids = set(map(int, external_ids)) - existing_ids
     new_makers = []
 
     # Create new Movie objects for any external IDs not found in existing Movie objects
@@ -116,10 +116,11 @@ def get_movie_makers(external_ids: [int]):
             m = add_movie_maker_to_database(movie, save=False)
             sleep(1)
             new_makers.append(m)
+            print(f"maker {m.external_id} was add to queue")
 
     new_makers = MovieMaker.objects.bulk_create(new_makers)
 
-    makers_ids = new_makers.value_list("id", flat=True)
+    makers_ids = [maker.id for maker in new_makers]
     makers_ids.extend(existing_makers.values_list("id", flat=True))
 
     return makers_ids
@@ -127,18 +128,11 @@ def get_movie_makers(external_ids: [int]):
 
 def add_film(film):
     film["release"] = film["release"].split()[0]
-    genres = Genre.objects.filter(name__in=film["genres"])
 
-    actors = get_movie_makers(film["actors"])
-
-    directors = get_movie_makers(film["directors"])
-
-    dubbings = get_dubbing(film["dubbing"])
-
-    del film["genres"]
-    del film["actors"]
-    del film["directors"]
-    del film["dubbing"]
+    genres = Genre.objects.filter(name__in=film.pop("genres"))
+    actors = get_movie_makers(film.pop("actors"))
+    directors = get_movie_makers(film.pop("directors"))
+    dubbings = get_dubbing(film.pop("dubbing"))
 
     film = Film.objects.create(**film)
 
