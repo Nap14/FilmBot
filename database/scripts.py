@@ -10,7 +10,7 @@ import init_django_orm  # noqa: F401
 
 
 from db.models import MovieMaker, Profession, Genre, Dubbing, Film
-from hdrezka_parser.parser import Maker
+from hdrezka_parser.parser import Movie
 
 
 class ExceptionHandler:
@@ -29,6 +29,49 @@ class ExceptionHandler:
 
         # Otherwise, play the default beep sound
         winsound.MessageBeep(winsound.MB_OK)
+
+
+def print_info(func: callable):
+    def wrapper(*args, **kwargs):
+        result = func(*args, **kwargs)
+        print(
+            colorama.Fore.CYAN +
+            f"{len(result)} makers was added to db" +
+            colorama.Style.RESET_ALL
+        )
+        return result
+    return wrapper
+
+
+def get_dubbing(dubbings: list) -> [Dubbing]:
+    """
+    Retrieve existing Dubbing objects from the database based on the given list of names.
+    Create and retrieve any new Dubbing objects and return the complete list of objects.
+    """
+
+    if not dubbings:
+        return []
+
+    # Retrieve existing Dubbing objects from the database
+    existing_dubbings = Dubbing.objects.filter(name__in=dubbings)
+
+    if len(existing_dubbings) == len(dubbings):
+        return existing_dubbings
+
+    # Identify any names not found in existing Dubbing objects
+    existing_names = set(existing_dubbings.values_list("name", flat=True))
+    new_names = list(set(dubbings) - existing_names)
+
+    # Create new Dubbing objects for any names not found in existing Dubbing objects
+    new_dubbings = [Dubbing(name=name) for name in new_names]
+    Dubbing.objects.bulk_create(new_dubbings)
+
+    # Retrieve all Dubbing objects (including newly created objects)
+    all_dubbings = Dubbing.objects.filter(
+        Q(name__in=existing_names) | Q(name__in=new_names)
+    )
+
+    return all_dubbings
 
 
 def add_movie_maker_to_database(movie_maker: dict, save: bool = True):
@@ -69,39 +112,27 @@ def add_movie_maker_to_database(movie_maker: dict, save: bool = True):
     return movie_maker_obj
 
 
-def get_dubbing(dubbings: list) -> [Dubbing]:
+@print_info
+def save_movie_makers(makers: list):
     """
-    Retrieve existing Dubbing objects from the database based on the given list of names.
-    Create and retrieve any new Dubbing objects and return the complete list of objects.
+    Bulk create new moviemakers in the database and return a list of makers.
+
+    :param maker_list: A list of dictionaries containing movie maker data.
+    :return: A list of created movie maker objects.
     """
-
-    if not dubbings:
-        return []
-
-    # Retrieve existing Dubbing objects from the database
-    existing_dubbings = Dubbing.objects.filter(name__in=dubbings)
-
-    if len(existing_dubbings) == len(dubbings):
-        return existing_dubbings
-
-    # Identify any names not found in existing Dubbing objects
-    existing_names = set(existing_dubbings.values_list("name", flat=True))
-    new_names = list(set(dubbings) - existing_names)
-
-    # Create new Dubbing objects for any names not found in existing Dubbing objects
-    new_dubbings = [Dubbing(name=name) for name in new_names]
-    Dubbing.objects.bulk_create(new_dubbings)
-
-    # Retrieve all Dubbing objects (including newly created objects)
-    all_dubbings = Dubbing.objects.filter(
-        Q(name__in=existing_names) | Q(name__in=new_names)
-    )
-
-    return all_dubbings
+    makers = [MovieMaker(**maker) for maker in makers]
+    return MovieMaker.objects.bulk_create(makers)
 
 
 # использовать когда парсятся фильмы та актёры и продюсеры это словари
-def get_movie_makers_from_film_page(makers: [dict]):
+def get_movie_makers(makers: [dict]):
+    """
+    Get a list of moviemakers from the database, creating new ones if necessary.
+
+    :param makers: A list of dictionaries containing moviemaker data.
+    :return: A list of moviemaker objects.
+    """
+
     # Create a list of moviemaker IDs from the given list of dictionaries
     makers_ids = [maker["external_id"] for maker in makers]
 
@@ -116,63 +147,21 @@ def get_movie_makers_from_film_page(makers: [dict]):
     existing_ids = list(existing_makers.values_list("external_id", flat=True))
 
     # Create a list of new movie makers to add to the database, skipping any makers that already exist
-    new_makers = [
-        add_movie_maker_to_database(maker, save=False)
-        for maker in makers
-        if maker['external_id'] not in existing_ids
-    ]
+    new_makers = save_movie_makers(
+        list(filter(lambda maker: maker["external_id"] not in existing_ids, makers))
+    )
 
-    # Bulk create new moviemakers in the database and return a list of all maker IDs (existing and new)
-    new_makers = MovieMaker.objects.bulk_create(new_makers)
-    new_ids = [maker.id for maker in new_makers]
-
-    all_ids = list(existing_makers.values_list('id', flat=True)) + new_ids
-    return all_ids
-
-
-def get_movie_makers(external_ids: [int]):
-    """
-    Retrieve existing MovieMaker objects from the database based on the given list of external IDs.
-    Create and retrieve any new Movie objects and return the complete list of objects.
-    """
-
-    # Retrieve existing Movie objects from the database
-    existing_makers = MovieMaker.objects.filter(external_id__in=external_ids)
-
-    if len(existing_makers) == len(external_ids):
-        return existing_makers
-
-    # Identify any external IDs not found in existing Movie objects
-    existing_ids = set(existing_makers.values_list("external_id", flat=True))
-    new_ids = set(map(int, external_ids)) - existing_ids
-    new_makers = []
-
-    # Create new Movie objects for any external IDs not found in existing Movie objects
-    for id_ in new_ids:
-        try:
-            maker = Maker(id_).parse_page()
-        except requests.exceptions.RequestException:
-            print(colorama.Fore.RED + "Connection error. Try to reconnect..." + colorama.Style.RESET_ALL)
-            MovieMaker.objects.bulk_create(new_makers)
-            print(f"{len(new_makers)} makers was added")
-            new_makers.clear()
-            maker = Maker(id_).parse_page()
-
-        if maker:
-            m = add_movie_maker_to_database(maker, save=False)
-            sleep(1)
-            new_makers.append(m)
-
-    new_makers = MovieMaker.objects.bulk_create(new_makers)
-    print(colorama.Fore.LIGHTMAGENTA_EX + f"{len(new_makers)} makers was added" + colorama.Style.RESET_ALL)
-
-    makers_ids = [maker.id for maker in new_makers]
-    makers_ids.extend(existing_makers.values_list("id", flat=True))
-
-    return makers_ids
+    # Return a list of all maker objects (existing and new)
+    return list(existing_makers) + list(new_makers)
 
 
 def add_film(film_data):
+    """
+    Get film data, save film to database and return Film object
+    :param film_data:
+    :return: Film obj
+    """
+
     # Split release date string to get only the date
     film_data["release"] = film_data["release"].split()[0]
 
@@ -202,22 +191,34 @@ def add_film(film_data):
     return film_obj
 
 
-def add_films(file, start: int = 0):
-    with open(file, "rb") as file:
-        films = json.load(file)
+def parese_films(start, stop):
+    films = []
+    makers = []
+    for parser_id in range(start, stop):
+        movie = Movie(parser_id).parse_page()
+        films.append(movie)
+
+        makers.extend(movie["actors"])
+        makers.extend(movie["directors"])
+
+        if not parser_id % 20:
+            get_movie_makers(makers)
+            makers.clear()
+
+    return films
+
+
+def add_films(films, start: int = 0):
 
     for i, film in list(enumerate(films))[start:]:
         print("Initialize film_data #", i)
         add_film(film)
 
 
-def add_films_from_file(file: str, *args):
-
+def main():
     with ExceptionHandler():
-        add_films(file, *args)
+        add_films(parese_films(3000, 4000))
 
 
 if __name__ == "__main__":
     pass
-
-
