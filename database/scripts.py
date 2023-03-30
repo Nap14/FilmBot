@@ -35,11 +35,12 @@ def print_info(func: callable):
     def wrapper(*args, **kwargs):
         result = func(*args, **kwargs)
         print(
-            colorama.Fore.CYAN +
-            f"{len(result)} makers was added to db" +
-            colorama.Style.RESET_ALL
+            colorama.Fore.CYAN
+            + f"{len(result)} makers was added to db"
+            + colorama.Style.RESET_ALL
         )
         return result
+
     return wrapper
 
 
@@ -86,7 +87,7 @@ def add_movie_maker_to_database(movie_maker: dict, save: bool = True):
     ]
 
     # Fix birthdate format if needed
-    if movie_maker["birth_date"]:
+    if movie_maker.get("birth_date"):
         birth_date_parts = movie_maker["birth_date"].split("-")
         for i in range(3):
             if not int(birth_date_parts[i]):
@@ -103,7 +104,7 @@ def add_movie_maker_to_database(movie_maker: dict, save: bool = True):
         movie_maker_obj.save()
 
         # Add Profession objects to MovieMaker object
-        movie_maker_obj.profession.set(professions)
+        [movie_maker_obj.profession.add(prof) for prof in professions]
 
         print(colorama.Fore.WHITE + f"{movie_maker_obj} was added")
     else:
@@ -120,7 +121,7 @@ def save_movie_makers(makers: list):
     :param maker_list: A list of dictionaries containing movie maker data.
     :return: A list of created movie maker objects.
     """
-    makers = [MovieMaker(**maker) for maker in makers]
+    makers = [add_movie_maker_to_database(maker, save=False) for maker in makers]
     return MovieMaker.objects.bulk_create(makers)
 
 
@@ -134,7 +135,7 @@ def get_movie_makers(makers: [dict]):
     """
 
     # Create a list of moviemaker IDs from the given list of dictionaries
-    makers_ids = [maker["external_id"] for maker in makers]
+    makers_ids = [int(maker["external_id"]) for maker in makers]
 
     # Find all moviemakers in the database with an external ID matching one of the IDs in the maker_ids list
     existing_makers = MovieMaker.objects.filter(external_id__in=makers_ids)
@@ -148,7 +149,9 @@ def get_movie_makers(makers: [dict]):
 
     # Create a list of new movie makers to add to the database, skipping any makers that already exist
     new_makers = save_movie_makers(
-        list(filter(lambda maker: maker["external_id"] not in existing_ids, makers))
+        list(
+            filter(lambda maker: int(maker["external_id"]) not in existing_ids, makers)
+        )
     )
 
     # Return a list of all maker objects (existing and new)
@@ -179,10 +182,10 @@ def add_film(film_data):
     film_obj = Film.objects.create(**film_data)
 
     # Set many-to-many relationships for genres, actors, directors, and dubbings
-    film_obj.genres.set(genres)
-    film_obj.actors.set(actors)
-    film_obj.directors.set(directors)
-    film_obj.dubbing.set(dubbings)
+    [film_obj.genres.add(genre) for genre in genres]
+    [film_obj.actors.add(actor) for actor in actors]
+    [film_obj.directors.add(director) for director in directors]
+    [film_obj.dubbing.add(dubbing) for dubbing in dubbings]
 
     # Print success message with Film object representation
     print(colorama.Fore.CYAN + f"Film {film_obj} was added" + colorama.Style.RESET_ALL)
@@ -195,11 +198,17 @@ def parese_films(start, stop):
     films = []
     makers = []
     for parser_id in range(start, stop):
+        print(
+            colorama.Fore.BLUE + f"parse movie #{parser_id}" + colorama.Style.RESET_ALL
+        )
         movie = Movie(parser_id).parse_page()
         films.append(movie)
+        print(f"{movie['name']} was add to queue")
 
-        makers.extend(movie["actors"])
-        makers.extend(movie["directors"])
+        for maker in movie["actors"] + movie["directors"]:
+            if maker["external_id"] in map(lambda x: x["external_id"], makers):
+                continue
+            makers.append(maker)
 
         if not parser_id % 20:
             get_movie_makers(makers)
@@ -215,9 +224,9 @@ def add_films(films, start: int = 0):
         add_film(film)
 
 
-def main():
+def main(*args):
     with ExceptionHandler():
-        add_films(parese_films(3000, 4000))
+        add_films(parese_films(*args))
 
 
 if __name__ == "__main__":
