@@ -42,8 +42,10 @@ class Movie(Page):
         text = str_date.split()
         text[1] = month_dict.get(text[1], "1")
         text = "-".join(text)
-
-        return str(datetime.strptime(text, pattern).date())
+        try:
+            return str(datetime.strptime(text, pattern).date())
+        except ValueError:
+            return None
 
     def parse_page(self):
         table = self.page.select_one("table")
@@ -78,6 +80,7 @@ class Movie(Page):
             "original_name": original_name,
             "description": self.page.select_one(".b-post__description_text").text,
             "country": table.find(string="Страна")
+            and table.find(string="Страна")
             .parent.parent.parent.select_one("td > a")
             .text,
             "trailer": get_trailer_url(self.id),
