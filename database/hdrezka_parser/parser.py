@@ -49,14 +49,17 @@ class Movie(Page):
 
     def parse_page(self):
         table = self.page.select_one("table")
-        str_time = table.find(itemprop="duration").text.split()[0]
+        str_time = (
+            table.find(itemprop="duration")
+            and table.find(itemprop="duration").text.split()[0]
+        )
         try:
             duration = int(str_time)
         except ValueError:
             hours, minutes = str_time.split(":")
             duration = int(hours) * 60 + int(minutes)
         except TypeError:
-            duration = 0
+            duration = None
 
         original_name = (
             self.page.select_one(".b-post__origtitle")
