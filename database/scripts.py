@@ -197,22 +197,29 @@ def add_film(film_data):
 def parese_films(start, stop):
     films = []
     makers = []
-    for parser_id in range(start, stop):
-        print(
-            colorama.Fore.BLUE + f"parse movie #{parser_id}" + colorama.Style.RESET_ALL
-        )
-        movie = Movie(parser_id).parse_page()
-        films.append(movie)
-        print(f"{movie['name']} was add to queue")
+    try:
+        for parser_id in range(start, stop):
+            print(
+                colorama.Fore.BLUE + f"parse movie #{parser_id}" + colorama.Style.RESET_ALL
+            )
+            movie = Movie(parser_id).parse_page()
+            sleep(1)
+            films.append(movie)
+            print(f"{movie['name']} was add to queue")
 
-        for maker in movie["actors"] + movie["directors"]:
-            if maker["external_id"] in map(lambda x: x["external_id"], makers):
-                continue
-            makers.append(maker)
+            for maker in movie["actors"] + movie["directors"]:
+                if maker["external_id"] in map(lambda x: x["external_id"], makers):
+                    continue
+                makers.append(maker)
 
-        if not parser_id % 25:
-            get_movie_makers(makers)
-            makers.clear()
+            if not parser_id % 25:
+                get_movie_makers(makers)
+                makers.clear()
+        get_movie_makers(makers)
+    except Exception:
+        get_movie_makers(makers)
+        add_films(films)
+        raise
 
     return films
 
