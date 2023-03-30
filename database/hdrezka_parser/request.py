@@ -1,9 +1,21 @@
 import json
+
+import colorama
 from colorama import Fore, Style
 
 import requests
 from fake_useragent import UserAgent
 from bs4 import BeautifulSoup
+
+
+def get_valid_page(*args, **kwargs):
+    count = 0
+    while count < 10:
+        try:
+            return get_soup(*args, **kwargs)
+        except requests.exceptions.RequestException:
+            print(colorama.Fore.RED + "Connection error. Try to reconnect" + colorama.Style.RESET_ALL)
+            count += 1
 
 
 # Define a function to retrieve the BeautifulSoup object for a given URL
