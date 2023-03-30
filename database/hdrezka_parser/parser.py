@@ -81,12 +81,14 @@ class Movie(Page):
             .parent.parent.parent.select_one("td > a")
             .text,
             "trailer": get_trailer_url(self.id),
-            "release": self.get_date_from_site(
+            "release": table.find(string="Дата выхода")
+            and self.get_date_from_site(
                 table.find(string="Дата выхода")
                 .parent.parent.parent.select_one("td:last-child")
                 .text.replace("года", "")
             ),
-            "rating": float(table.select_one(".imdb .bold").text),
+            "rating": table.select_one(".imdb .bold")
+            and float(table.select_one(".imdb .bold").text),
             "genres": [genre.text for genre in table.find_all(itemprop="genre")],
             "actors": [
                 {
