@@ -1,17 +1,34 @@
 import json
 
 import colorama
+import requests
+import winsound
 from django.db.models import Q
-from winsound import Beep
 from time import sleep
-
-from django.core.exceptions import ObjectDoesNotExist
 
 import init_django_orm  # noqa: F401
 
 
 from db.models import MovieMaker, Profession, Genre, Dubbing, Film
 from hdrezka_parser.parser import Maker
+
+
+class ExceptionHandler:
+    """
+    The ExceptionHandler class is a Python class that can be used as a context manager to handle exceptions in a specific way. It has two methods, __enter__ and __exit__, which are called when the context is entered and exited, respectively
+    """
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        # If an exception occurred, beep at 2500Hz for 1 second
+        if exc_type is not None:
+            winsound.Beep(2500, 1000)
+            return
+
+        # Otherwise, play the default beep sound
+        winsound.MessageBeep(winsound.MB_OK)
 
 
 def add_movie_maker_to_database(movie_maker: dict, save: bool = True):
@@ -132,14 +149,22 @@ def get_movie_makers(external_ids: [int]):
 
     # Create new Movie objects for any external IDs not found in existing Movie objects
     for id_ in new_ids:
-        maker = Maker(id_).parse_page()
+        try:
+            maker = Maker(id_).parse_page()
+        except requests.exceptions.RequestException:
+            print(colorama.Fore.RED + "Connection error. Try to reconnect..." + colorama.Style.RESET_ALL)
+            MovieMaker.objects.bulk_create(new_makers)
+            print(f"{len(new_makers)} makers was added")
+            new_makers.clear()
+            maker = Maker(id_).parse_page()
+
         if maker:
             m = add_movie_maker_to_database(maker, save=False)
             sleep(1)
             new_makers.append(m)
-            print(f"maker {m.external_id} was add to queue")
 
     new_makers = MovieMaker.objects.bulk_create(new_makers)
+    print(colorama.Fore.LIGHTMAGENTA_EX + f"{len(new_makers)} makers was added" + colorama.Style.RESET_ALL)
 
     makers_ids = [maker.id for maker in new_makers]
     makers_ids.extend(existing_makers.values_list("id", flat=True))
@@ -187,12 +212,12 @@ def add_films(file, start: int = 0):
 
 
 def add_films_from_file(file: str, *args):
-    try:
+
+    with ExceptionHandler():
         add_films(file, *args)
-    except Exception:
-        Beep(2500, 1000)
-        raise
 
 
 if __name__ == "__main__":
     pass
+
+
