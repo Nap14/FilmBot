@@ -1,3 +1,4 @@
+import datetime
 import json
 
 import colorama
@@ -29,6 +30,33 @@ class ExceptionHandler:
 
         # Otherwise, play the default beep sound
         winsound.MessageBeep(winsound.MB_OK)
+        print(
+            colorama.Fore.GREEN
+            + "All tasks are completed successfully🎉"
+            + colorama.Style.RESET_ALL
+        )
+
+
+class Timer:
+    def __enter__(self):
+        self.start_time = datetime.datetime.now()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        print(colorama.Fore.GREEN, end="")
+        if exc_type is not None:
+            print(
+                colorama.Fore.RED
+                + f"Process exited with an exception: {exc_val}"
+            )
+
+        print(
+            f"Process finished with {self.elapsed_time()} seconds"
+            + colorama.Style.RESET_ALL
+        )
+
+    def elapsed_time(self):
+        return (datetime.datetime.now() - self.start_time).total_seconds()
 
 
 def print_info(func: callable):
@@ -200,7 +228,9 @@ def parese_films(start, stop):
     try:
         for parser_id in range(start, stop):
             print(
-                colorama.Fore.BLUE + f"parse movie #{parser_id}" + colorama.Style.RESET_ALL
+                colorama.Fore.BLUE
+                + f"parse movie #{parser_id}"
+                + colorama.Style.RESET_ALL
             )
             movie = Movie(parser_id).parse_page()
             sleep(1)
@@ -232,7 +262,7 @@ def add_films(films, start: int = 0):
 
 
 def main(*args):
-    with ExceptionHandler():
+    with Timer(), ExceptionHandler():
         add_films(parese_films(*args))
 
 

@@ -16,10 +16,7 @@ def get_valid_page(func: callable):
             try:
                 return func(*args, **kwargs)
             except requests.exceptions.RequestException as e:
-                print(
-                    colorama.Fore.RED
-                    + "Connection error. Try to reconnect..."
-                )
+                print(colorama.Fore.RED + "Connection error. Try to reconnect...")
                 print(str(e) + colorama.Style.RESET_ALL)
                 sleep(10)
                 count += 1
