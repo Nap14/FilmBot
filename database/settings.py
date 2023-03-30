@@ -14,6 +14,7 @@ from pathlib import Path
 
 
 import dj_database_url
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -26,7 +27,7 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
 
 # Application definition
 
-INSTALLED_APPS = ["db", "django_countries"]
+INSTALLED_APPS = ["db", "django_countries", "django_extensions"]
 
 # Database
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases
