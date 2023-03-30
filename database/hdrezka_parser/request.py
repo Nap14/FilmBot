@@ -9,22 +9,27 @@ from fake_useragent import UserAgent
 from bs4 import BeautifulSoup
 
 
-def get_valid_page(*args, **kwargs):
-    count = 0
-    while count < 10:
-        try:
-            return get_soup(*args, **kwargs)
-        except requests.exceptions.RequestException as e:
-            print(
-                colorama.Fore.RED
-                + "Connection error. Try to reconnect..."
-            )
-            print(str(e) + colorama.Style.RESET_ALL)
-            sleep(10)
-            count += 1
+def get_valid_page(func: callable):
+    def wrapper(*args, **kwargs):
+        count = 0
+        while count < 10:
+            try:
+                return func(*args, **kwargs)
+            except requests.exceptions.RequestException as e:
+                print(
+                    colorama.Fore.RED
+                    + "Connection error. Try to reconnect..."
+                )
+                print(str(e) + colorama.Style.RESET_ALL)
+                sleep(10)
+                count += 1
+            raise Exception("Failed to establish connection after multiple attempts.")
+
+    return wrapper
 
 
 # Define a function to retrieve the BeautifulSoup object for a given URL
+@get_valid_page
 def get_soup(
     url: str,
     method: str = "GET",
@@ -54,6 +59,7 @@ def get_request_config(request_type: str = "base") -> dict:
     return data[request_type]
 
 
+@get_valid_page
 def get_trailer_url(film_id: int):
 
     trailer_data = get_request_config("trailer")
