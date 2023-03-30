@@ -245,7 +245,11 @@ def parese_films(start, stop):
                 + f"parse movie #{parser_id}"
                 + colorama.Style.RESET_ALL
             )
-            movie = Movie(parser_id).parse_page()
+            try:
+                movie = Movie(parser_id).parse_page()
+            except requests.exceptions.HTTPError as e:
+                print(colorama.Fore.RED + str(e) + colorama.Style.RESET_ALL)
+                continue
             sleep(1)
             films.append(movie)
             print(f"{movie['name']} was add to queue")
