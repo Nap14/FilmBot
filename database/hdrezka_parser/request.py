@@ -23,7 +23,7 @@ def get_valid_page(func: callable):
                 print(str(e) + colorama.Style.RESET_ALL)
                 sleep(10)
                 count += 1
-            raise Exception("Failed to establish connection after multiple attempts.")
+        raise Exception("Failed to establish connection after multiple attempts.")
 
     return wrapper
 
