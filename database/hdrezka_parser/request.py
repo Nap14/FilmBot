@@ -1,4 +1,5 @@
 import json
+from time import sleep
 
 import colorama
 from colorama import Fore, Style
@@ -13,8 +14,13 @@ def get_valid_page(*args, **kwargs):
     while count < 10:
         try:
             return get_soup(*args, **kwargs)
-        except requests.exceptions.RequestException:
-            print(colorama.Fore.RED + "Connection error. Try to reconnect" + colorama.Style.RESET_ALL)
+        except requests.exceptions.RequestException as e:
+            print(
+                colorama.Fore.RED
+                + "Connection error. Try to reconnect..."
+            )
+            print(str(e) + colorama.Style.RESET_ALL)
+            sleep(10)
             count += 1
 
 
