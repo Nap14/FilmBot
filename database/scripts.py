@@ -165,8 +165,8 @@ def add_film(film_data):
     :return: Film obj
     """
 
-    # Split release date string to get only the date
-    film_data["release"] = film_data["release"].split()[0]
+    # Split release date string to get only the date and NULL if it NULL
+    film_data["release"] = film_data["release"] and film_data["release"].split()[0]
 
     # Get Genre objects for each genre name
     genres = Genre.objects.filter(name__in=film_data.pop("genres"))
@@ -210,7 +210,7 @@ def parese_films(start, stop):
                 continue
             makers.append(maker)
 
-        if not parser_id % 20:
+        if not parser_id % 25:
             get_movie_makers(makers)
             makers.clear()
 
