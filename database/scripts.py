@@ -38,17 +38,30 @@ class ExceptionHandler:
 
 
 class Timer:
+    """
+    A context manager for timing the execution of a block of code.
+
+    Usage:
+    ------
+    with Timer() as timer:
+        # Code to be timed here
+    print(f"Elapsed time: {timer.elapsed_time()} seconds")
+    """
+
     def __enter__(self):
         self.start_time = datetime.datetime.now()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        """
+        Exits the context and calculates the elapsed time. Prints the result
+        to the console in green if the process completed successfully, and
+        in red if an exception was raised.
+        """
+
         print(colorama.Fore.GREEN, end="")
         if exc_type is not None:
-            print(
-                colorama.Fore.RED
-                + f"Process exited with an exception: {exc_val}"
-            )
+            print(colorama.Fore.RED + f"Process exited with an exception: {exc_val}")
 
         print(
             f"Process finished with {self.elapsed_time()} seconds"
