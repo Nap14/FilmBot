@@ -35,19 +35,13 @@ class FilmBot:
             actors=", ".join(actors),
         )
 
-        self.bot.send_message(test_id, message, parse_mode="HTML")
+        self.bot.send_message(self.chat_id, message, parse_mode="HTML")
 
     def _scheduler(self):
-        schedule.every(10).seconds.do(self._sen_film_every_day)
-        # schedule.every().day.at("19:42").do(sen_film_every_day)
+        schedule.every().day.at("19:42").do(self._sen_film_every_day)
         while True:
             schedule.run_pending()
 
 
 if __name__ == "__main__":
-    TOKEN = os.environ.get("BOT_TOKEN")
-    films_chat_id = -1001620986020
-    test_id = -1001156799972
-
-    bot = FilmBot(TOKEN, films_chat_id)
-    bot.start()
+    pass
