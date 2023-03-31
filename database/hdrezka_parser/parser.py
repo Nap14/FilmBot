@@ -77,11 +77,18 @@ class Movie(Page):
             .parent.parent.parent.td.find_next_sibling("td")
             .span.text[:-1]
         )
+        description = (
+            self.page.select_one(".b-post__description_text")
+            and self.page.select_one(".b-post__description_text").text
+            or table.find(string="Слоган")
+            .parent.parent.parent.select_one("td:last-child")
+            .text
+        )
 
         return {
             "name": self.page.select_one(".b-post__title > h1").text,
             "original_name": original_name,
-            "description": self.page.select_one(".b-post__description_text").text,
+            "description": description,
             "country": table.find(string="Страна")
             and table.find(string="Страна")
             .parent.parent.parent.select_one("td > a")
