@@ -8,7 +8,7 @@ Python3 must be already installed
 
 ```shell
 git clone -b deploy https://github.com/Nap14/FilmBot.git
-cd DayWordTelegramBot
+cd FilmBot
 python -m venv venv
 source venv\Sripts\activate
 pip install -r requirments.txt
