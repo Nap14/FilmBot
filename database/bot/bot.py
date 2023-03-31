@@ -23,7 +23,7 @@ class FilmBot:
 
     def _sen_film_every_day(self):
         film = Film.objects.filter(rating__gte=7).order_by("?").first()
-        with open("../templates/main.html", "rt", encoding="utf-8") as file:
+        with open("templates/main.html", "rt", encoding="utf-8") as file:
             template = file.read()
         actors = [f"#{actor.name.split()[-1]}" for actor in film.actors.all()]
 
@@ -38,7 +38,7 @@ class FilmBot:
         self.bot.send_message(self.chat_id, message, parse_mode="HTML")
 
     def _scheduler(self):
-        schedule.every().day.at("19:42").do(self._sen_film_every_day)
+        schedule.every(3).days.at("19:42").do(self._sen_film_every_day)
         while True:
             schedule.run_pending()
 
