@@ -60,3 +60,10 @@ class Film(models.Model):
 
     class Meta:
         default_related_name = "films"
+
+
+class Chat(models.Model):
+    chat_id = models.IntegerField(unique=True)
+    last_film_id = models.ForeignKey(Film, null=True, on_delete=models.SET_NULL)
+    chat_name = models.CharField(max_length=255, default=f"Chat {chat_id}")
+    spam = models.BooleanField()
