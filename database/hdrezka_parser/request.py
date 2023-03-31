@@ -16,7 +16,10 @@ def get_valid_page(func: callable):
             try:
                 return func(*args, **kwargs)
             except requests.exceptions.RequestException as e:
-                if e.response.status_code == 404:
+                if (
+                    isinstance(e, requests.exceptions.HTTPError)
+                    and e.response.status_code == 404
+                ):
                     raise
                 print(colorama.Fore.RED + "Connection error. Try to reconnect...")
                 print(str(e) + colorama.Style.RESET_ALL)
