@@ -259,16 +259,22 @@ def parese_films(start, stop):
                     continue
                 makers.append(maker)
 
-            if not parser_id % 25:
+            if not parser_id % 50:
                 get_movie_makers(makers)
                 makers.clear()
-        get_movie_makers(makers)
-    except Exception:
+
+            if not parser_id % 100:
+                add_films(films)
+                films.clear()
+
+    except Exception as e:
+        print(e)
         get_movie_makers(makers)
         add_films(films)
         raise
-
-    return films
+    else:
+        get_movie_makers(makers)
+        add_films(films)
 
 
 def add_films(films, start: int = 0):
@@ -277,11 +283,13 @@ def add_films(films, start: int = 0):
         print("Initialize film_data #", i)
         add_film(film)
 
+    print(f"{i} films was add to database")
+
 
 def main(*args):
     with Timer(), ExceptionHandler():
-        add_films(parese_films(*args))
+        parese_films(*args)
 
 
 if __name__ == "__main__":
-    pass
+    main(6000, 7000)
