@@ -20,7 +20,7 @@ class FilmBot:
     def __init__(self, token, chat_id):
         self.bot = telebot.TeleBot(token)
         self.chat_id = chat_id
-        with open("templates/main.html", "rt", encoding="utf-8") as file:
+        with open("database/templates/main.html", "rt", encoding="utf-8") as file:
             self.template = file.read()
 
     def start(self):
