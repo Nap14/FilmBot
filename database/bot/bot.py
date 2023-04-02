@@ -48,7 +48,7 @@ class FilmBot:
         self.bot.send_message(chat_id, message, parse_mode="HTML")
 
     def _scheduler(self):
-        schedule.every(3).days.at("19:42").do(self._sen_film_every_day)
+        schedule.every().day.at("19:42").do(self._sen_film_every_day)
         while True:
             schedule.run_pending()
 
