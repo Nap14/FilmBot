@@ -36,8 +36,13 @@ class FilmBot:
 
             self.bot.send_message(message.chat.id, film, parse_mode="HTML")
 
-        Thread(target=self._scheduler, args=()).start()
-        self.bot.polling(non_stop=True)
+        thread = Thread(target=self._scheduler, args=())
+        thread.start()
+        try:
+            self.bot.polling(non_stop=True)
+        except Exception:
+            thread.join()
+            raise
 
     def _sen_film_every_day(self, chat_id: int = None):
         if chat_id is None:
