@@ -13,7 +13,7 @@ def film_bot(environ, start_response):
     headers = [('Content-type', 'text/plain; charset=utf-8')]
     start_response(status, headers)
 
-    lock = fasteners.InterProcessLock('bot/bot.py')
+    lock = fasteners.InterProcessLock('database/bot/bot.py')
     print(lock.acquired)
     with lock:
         BOT.start()
