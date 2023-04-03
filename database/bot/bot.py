@@ -57,7 +57,7 @@ class FilmBot:
 
     def _scheduler(self):
         schedule.every().day.at("19:42").do(self._sen_film_every_day)
-        schedule.every().hour.do(self._sen_film_every_day())
+        schedule.every().hour.do(self._sen_film_every_day)
         while True:
             schedule.run_pending()
 
