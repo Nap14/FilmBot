@@ -1,16 +1,14 @@
 import os
+import sys
 
-from bot.bot import FilmBot
-from db.models import Chat
+import fasteners
+
+from bot.bot import BOT
 
 import init_django_orm  # noqa: F401
 
 
 if __name__ == '__main__':
-    token = os.environ.get("BOT_TOKEN")
-    chat_id = Chat.objects.get(chat_name="Фільми").chat_id
-    bot = FilmBot(token, chat_id)
-    bot.start()
-
-
-
+    lock = fasteners.InterProcessLock('database/bot/bot.py')
+    with lock:
+        BOT.start()

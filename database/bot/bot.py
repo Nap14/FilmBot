@@ -9,7 +9,6 @@ import init_django_orm  # noqa: F401
 from db.models import Film, Chat
 
 
-
 class FilmBot:
     """
     A bot that sends a message about a random film every 3 days.
@@ -72,6 +71,11 @@ class FilmBot:
             description=film.description,
             actors=", ".join(actors),
         )
+
+
+token = os.environ.get("BOT_TOKEN")
+chat_id = Chat.objects.get(chat_name="Фільми").chat_id
+BOT = FilmBot(token, chat_id)
 
 
 if __name__ == "__main__":
