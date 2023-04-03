@@ -73,7 +73,10 @@ def get_trailer_url(film_id: int):
     response = requests.post(data=data, **trailer_data)
 
     try:
-        soup = BeautifulSoup(response.json()["code"], "html.parser")
-        return soup.select_one("iframe")["src"].split("?")[0]
+        code = response.json()["code"]
     except KeyError:
         return None
+
+    if code:
+        soup = BeautifulSoup(code, "html.parser")
+        return soup.select_one("iframe")["src"].split("?")[0]
