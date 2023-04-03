@@ -18,7 +18,7 @@ class FilmBot:
     The bot can also send the message about the film on demand via the "/film" command.
     """
 
-    with open("database/templates/main.html", "rt", encoding="utf-8") as file:
+    with open("templates/main.html", "rt", encoding="utf-8") as file:
         TEMPLATE = file.read()
 
     def __init__(self, token, chat_id):
