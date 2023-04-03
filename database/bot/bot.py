@@ -37,14 +37,8 @@ class FilmBot:
 
             self.bot.send_message(message.chat.id, film, parse_mode="HTML")
 
-        thread = Thread(target=self._scheduler, args=())
-        thread.start()
-        try:
-            self.bot.polling(non_stop=True)
-        except Exception as e:
-            print(e)
-            thread.join()
-            raise
+        Thread(target=self._scheduler, args=())
+        self.bot.infinity_polling()
 
     def _sen_film_every_day(self, chat_id: int = None):
         if chat_id is None:
@@ -73,9 +67,9 @@ class FilmBot:
         )
 
 
-token = os.environ.get("BOT_TOKEN")
-chat_id = Chat.objects.get(chat_name="Фільми").chat_id
-BOT = FilmBot(token, chat_id)
+TOKEN = os.environ.get("BOT_TOKEN")
+CHAT_ID = Chat.objects.get(chat_name="Фільми").chat_id
+BOT = FilmBot(TOKEN, CHAT_ID)
 
 
 if __name__ == "__main__":
