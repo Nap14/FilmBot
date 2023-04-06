@@ -1,6 +1,8 @@
 from datetime import datetime
 from abc import abstractmethod
 
+from bs4 import BeautifulSoup
+
 from hdrezka_parser.request import get_request_config, get_trailer_url, get_soup
 
 
@@ -10,11 +12,16 @@ class Page:
     def __init__(self, id_):
         self.id = id_
         self._url = self.BASE_URL.format(self.id)
-        self._headers = get_request_config()["headers"]
-        self.page = get_soup(url=self._url, headers=self._headers)
+
+    @property
+    def page(self) -> BeautifulSoup:
+        return get_soup(
+            url=self._url,
+            headers=get_request_config()["headers"]
+        )
 
     @abstractmethod
-    def parse_page(self):
+    def parse_page(self) -> dict:
         pass
 
 
