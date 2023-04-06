@@ -1,5 +1,6 @@
 import datetime
 import json
+import threading
 
 import colorama
 import requests
@@ -229,15 +230,20 @@ def add_film(film_data):
     [film_obj.dubbing.add(dubbing) for dubbing in dubbings]
 
     # Print success message with Film object representation
-    print(colorama.Fore.CYAN + f"Film {film_obj} was added" + colorama.Style.RESET_ALL)
+    print(
+        colorama.Fore.CYAN
+        + f"Film {film_obj} #{film_obj.external_id} was added to db"
+        + colorama.Style.RESET_ALL
+    )
 
     # Return created Film object
     return film_obj
 
 
-def parese_films(start, stop):
+def parse_films(start, stop):
     films = []
     makers = []
+    threads = []
     try:
         for parser_id in range(start, stop):
             print(
@@ -264,31 +270,41 @@ def parese_films(start, stop):
                 makers.clear()
 
             if not parser_id % 100:
-                add_films(films)
+                thread = threading.Thread(target=add_films, args=(films,))
+                thread.start()
+                threads.append(thread)
                 films.clear()
 
     except Exception as e:
         print(e)
-        get_movie_makers(makers)
-        add_films(films)
         raise
-    else:
+    finally:
         get_movie_makers(makers)
         add_films(films)
+        print(len(threads))
+
+        for thread in threads:
+            thread.join()
 
 
 def add_films(films, start: int = 0):
-
+    films_count = len(films)
     for i, film in list(enumerate(films))[start:]:
-        print("Initialize film_data #", i)
+        print(
+            f"Initializing adding to database: {i+1}/{films_count} - Movie ID: {film.get('external_id')}"
+        )
         add_film(film)
 
-    print(f"{i} films was add to database")
+    print(
+        colorama.Fore.LIGHTGREEN_EX
+        + f"{films_count} films was add to database"
+        + colorama.Style.RESET_ALL
+    )
 
 
 def main(*args):
     with Timer(), ExceptionHandler():
-        parese_films(*args)
+        parse_films(*args)
 
 
 if __name__ == "__main__":
