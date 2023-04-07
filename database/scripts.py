@@ -1,5 +1,4 @@
 import datetime
-import json
 import threading
 
 import colorama
@@ -160,8 +159,8 @@ def save_movie_makers(makers: list):
     """
     Bulk create new moviemakers in the database and return a list of makers.
 
-    :param maker_list: A list of dictionaries containing movie maker data.
-    :return: A list of created movie maker objects.
+    :param makers: A list of dictionaries containing moviemaker data.
+    :return: A list of created moviemaker objects.
     """
     makers = [add_movie_maker_to_database(maker, save=False) for maker in makers]
     return MovieMaker.objects.bulk_create(makers)
@@ -269,7 +268,6 @@ def parse_films(start, stop):
                 get_movie_makers(makers)
                 makers.clear()
 
-            if not parser_id % 100:
                 thread = threading.Thread(target=add_films, args=(films,))
                 thread.start()
                 threads.append(thread)
@@ -281,7 +279,7 @@ def parse_films(start, stop):
     finally:
         get_movie_makers(makers)
         add_films(films)
-        print(len(threads))
+        print(f"len(threads) threads was join")
 
         for thread in threads:
             thread.join()
