@@ -58,8 +58,11 @@ class Movie(Page):
         try:
             duration = int(str_time)
         except ValueError:
-            hours, minutes = str_time.split(":")
-            duration = int(hours) * 60 + int(minutes)
+            try:
+                hours, minutes = str_time.split(":")
+                duration = int(hours) * 60 + int(minutes)
+            except ValueError:
+                duration = str_time.split("-")[-1]
         except TypeError:
             duration = None
 
