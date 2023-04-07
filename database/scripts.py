@@ -242,7 +242,7 @@ def add_film(film_data):
 def parse_films(start, stop):
     films = []
     makers = []
-    threads = []
+    thread = None
     try:
         for parser_id in range(start, stop):
             print(
@@ -268,9 +268,10 @@ def parse_films(start, stop):
                 get_movie_makers(makers)
                 makers.clear()
 
-                thread = threading.Thread(target=add_films, args=(films,))
+                if thread is not None and thread.is_alive():
+                    thread.join()
+                thread = threading.Thread(target=add_films, args=(films,), daemon=True)
                 thread.start()
-                threads.append(thread)
                 films.clear()
 
     except Exception as e:
@@ -279,10 +280,10 @@ def parse_films(start, stop):
     finally:
         get_movie_makers(makers)
         add_films(films)
-        print(f"len(threads) threads was join")
 
-        for thread in threads:
+        if thread is not None and thread.is_alive():
             thread.join()
+            print("All threads are joined.")
 
 
 def add_films(films, start: int = 0):
