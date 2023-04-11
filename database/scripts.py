@@ -45,7 +45,7 @@ class Timer:
     ------
     with Timer() as timer:
         # Code to be timed here
-    print(f"Elapsed time: {timer.elapsed_time()} seconds")
+    print(f"Elapsed time: {timer.elapsed_time()} _seconds")
     """
 
     def __enter__(self):
@@ -64,7 +64,7 @@ class Timer:
             print(colorama.Fore.RED + f"Process exited with an exception: {exc_val}")
 
         print(
-            f"Process finished with {self.elapsed_time()} seconds"
+            f"Process finished with {self.elapsed_time()} _seconds"
             + colorama.Style.RESET_ALL
         )
 
@@ -243,6 +243,7 @@ def parse_films(start, stop):
     films = []
     makers = []
     thread = None
+    errors = 0
     try:
         for parser_id in range(start, stop):
             print(
@@ -252,19 +253,23 @@ def parse_films(start, stop):
             )
             try:
                 movie = Movie(parser_id).parse_page()
+                errors = 0
             except requests.exceptions.HTTPError as e:
+                errors += 1
                 print(colorama.Fore.RED + str(e) + colorama.Style.RESET_ALL)
+                if errors > 10:
+                    raise Exception("Congratulation you parse all films 10 last pages was return without response")
                 continue
-            sleep(1)
             films.append(movie)
             print(f"{movie['name']} was add to queue")
+            sleep(1)
 
             for maker in movie["actors"] + movie["directors"]:
                 if maker["external_id"] in map(lambda x: x["external_id"], makers):
                     continue
                 makers.append(maker)
 
-            if not parser_id % 50:
+            if len(films) >= 50:
                 get_movie_makers(makers)
                 makers.clear()
 
