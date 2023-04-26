@@ -69,6 +69,7 @@ class Timer(AsDecoratorMixin):
                 colorama.Fore.RED
                 + f"Process exited with an exception: {exc_val} for {elapsed}"
             )
+            return
 
         print(
             colorama.Fore.GREEN
