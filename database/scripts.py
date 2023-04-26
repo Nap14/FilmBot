@@ -9,10 +9,10 @@ import init_django_orm  # noqa: F401
 
 from db.models import MovieMaker, Profession, Genre, Dubbing, Film
 from hdrezka_parser.parser import Movie
-from methods import print_info, Timer, ExceptionHandler
+from utils import print_info, Timer, ExceptionHandler
 
 
-def get_dubbing(dubbings: list) -> [Dubbing]:
+def get_dubbing(dubbings: list) -> list[Dubbing]:
     """
     Retrieve existing Dubbing objects from the database based on the given list of names.
     Create and retrieve any new Dubbing objects and return the complete list of objects.
@@ -43,7 +43,8 @@ def get_dubbing(dubbings: list) -> [Dubbing]:
     return all_dubbings
 
 
-def add_movie_maker_to_database(movie_maker: dict, save: bool = True):
+@print_info(message="was added to queue", color="white", method=lambda m: m)
+def add_movie_maker_to_database(movie_maker: dict, save: bool = True) -> MovieMaker:
     """
     Add a new MovieMaker object to the database based on the given dictionary.
     Return the newly created object.
@@ -73,16 +74,13 @@ def add_movie_maker_to_database(movie_maker: dict, save: bool = True):
 
         # Add Profession objects to MovieMaker object
         [movie_maker_obj.profession.add(prof) for prof in professions]
-
-        print(colorama.Fore.WHITE + f"{movie_maker_obj} was added")
-    else:
-        print(colorama.Fore.WHITE + f"{movie_maker_obj} was added to queue")
+        print("and was saved")
 
     return movie_maker_obj
 
 
 @print_info(message="makers was added to db")
-def save_movie_makers(makers: list):
+def save_movie_makers(makers: list) -> list[MovieMaker]:
     """
     Bulk create new moviemakers in the database and return a list of makers.
 
@@ -94,7 +92,7 @@ def save_movie_makers(makers: list):
 
 
 # использовать когда парсятся фильмы та актёры и продюсеры это словари
-def get_movie_makers(makers: [dict]):
+def get_movie_makers(makers: [dict]) -> list[MovieMaker]:
     """
     Get a list of moviemakers from the database, creating new ones if necessary.
 
@@ -126,7 +124,12 @@ def get_movie_makers(makers: [dict]):
     return list(existing_makers) + list(new_makers)
 
 
-def add_film(film_data):
+@print_info(
+    message="was added to db",
+    color="cyan",
+    method=lambda f: f"Film {f} #{f.external_id}",
+)
+def add_film(film_data: dict) -> Film:
     """
     Get film data, save film to database and return Film object
     :param film_data:
@@ -155,19 +158,27 @@ def add_film(film_data):
     [film_obj.directors.add(director) for director in directors]
     [film_obj.dubbing.add(dubbing) for dubbing in dubbings]
 
-    # Print success message with Film object representation
-    print(
-        colorama.Fore.CYAN
-        + f"Film {film_obj} #{film_obj.external_id} was added to db"
-        + colorama.Style.RESET_ALL
-    )
-
     # Return created Film object
     return film_obj
 
 
+@print_info(message="films was add to database", color="LIGHTGREEN_EX")
+def add_films(films, start: int = 0):
+    result = []
+    films_count = len(films)
+    for i, film in list(enumerate(films))[start:]:
+        print(
+            f"Initializing adding to database: {i+1}/{films_count} - Movie ID: {film.get('external_id')}"
+        )
+        result.append(add_film(film))
+
+    return result
+
+
+@Timer()
+@ExceptionHandler()
 def parse_films(
-    start: int = 1, stop: int = None, ids: list[int] = None, stop_exception: bool = True
+    start: int = 1, stop: int = None, ids: list[int] = None, stop_limit: int = 10
 ):
     films = []
     makers = []
@@ -189,10 +200,12 @@ def parse_films(
             except requests.exceptions.HTTPError as e:
                 errors += 1
                 print(colorama.Fore.RED + str(e) + colorama.Style.RESET_ALL)
-                if stop_exception and errors > 10:
+                if errors > stop_limit:
                     raise Exception(
                         "Congratulation you parse all films 10 last pages was return without response"
                     )
+                continue
+            except AttributeError:
                 continue
             films.append(movie)
             print(f"{movie['name']} was add to queue")
@@ -225,24 +238,18 @@ def parse_films(
             print("All threads are joined.")
 
 
-def add_films(films, start: int = 0):
-    films_count = len(films)
-    for i, film in list(enumerate(films))[start:]:
-        print(
-            f"Initializing adding to database: {i+1}/{films_count} - Movie ID: {film.get('external_id')}"
-        )
-        add_film(film)
+def get_empty_ids():
+    """
+    Returns a list of empty external_ids that can be used to create new Film objects.
+    """
+    used_ids = set(Film.objects.all().values_list("external_id", flat=True))
+    all_ids = set(range(1, max(used_ids)))
 
-    print(
-        colorama.Fore.LIGHTGREEN_EX
-        + f"{films_count} films was add to database"
-        + colorama.Style.RESET_ALL
-    )
+    return sorted(all_ids - used_ids)
 
 
 def main(*args, **kwargs):
-    with Timer(), ExceptionHandler():
-        parse_films(*args, **kwargs)
+    parse_films(*args, **kwargs)
 
 
 if __name__ == "__main__":
