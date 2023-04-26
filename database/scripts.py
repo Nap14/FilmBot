@@ -239,13 +239,18 @@ def add_film(film_data):
     return film_obj
 
 
-def parse_films(start, stop):
+def parse_films(
+    start: int = 1, stop: int = None, ids: list[int] = None, stop_exception: bool = True
+):
     films = []
     makers = []
     thread = None
     errors = 0
+    if not ids:
+        ids = range(start, stop)
+
     try:
-        for parser_id in range(start, stop):
+        for parser_id in ids:
             print(
                 colorama.Fore.BLUE
                 + f"parse movie #{parser_id}"
@@ -257,8 +262,10 @@ def parse_films(start, stop):
             except requests.exceptions.HTTPError as e:
                 errors += 1
                 print(colorama.Fore.RED + str(e) + colorama.Style.RESET_ALL)
-                if errors > 10:
-                    raise Exception("Congratulation you parse all films 10 last pages was return without response")
+                if stop_exception and errors > 10:
+                    raise Exception(
+                        "Congratulation you parse all films 10 last pages was return without response"
+                    )
                 continue
             films.append(movie)
             print(f"{movie['name']} was add to queue")
@@ -312,4 +319,4 @@ def main(*args):
 
 
 if __name__ == "__main__":
-    main(6000, 7000)
+    main(57_000, 60_000)
