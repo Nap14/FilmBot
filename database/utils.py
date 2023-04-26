@@ -4,12 +4,24 @@ from typing import Callable
 import colorama
 import winsound
 
-from db.models import Film
 
-
-class ExceptionHandler:
+class AsDecoratorMixin:
     """
-    The ExceptionHandler class is a Python class that can be used as a context manager to handle exceptions in a specific way. It has two methods, __enter__ and __exit__, which are called when the context is entered and exited, respectively
+    This code defines a mixin class that can be used to create a decorator that applies a context manager to a function.
+    """
+
+    def __call__(self, func: Callable) -> Callable:
+        def wrapper(*args, **kwargs):
+            with self:
+                return func(*args, **kwargs)
+
+        return wrapper
+
+
+class ExceptionHandler(AsDecoratorMixin):
+    """
+    The ExceptionHandler class is a Python class that can be used as a context manager to handle exceptions in a specific way.
+    It has two methods, __enter__ and __exit__, which are called when the context is entered and exited, respectively
     """
 
     def __enter__(self):
@@ -29,23 +41,15 @@ class ExceptionHandler:
             + colorama.Style.RESET_ALL
         )
 
-    def __call__(self, func: Callable) -> Callable:
-        def wrapper(*args, **kwargs):
-            with self:
-                return func(*args, **kwargs)
 
-        return wrapper
-
-
-class Timer:
+class Timer(AsDecoratorMixin):
     """
     A context manager for timing the execution of a block of code.
 
     Usage:
     ------
-    with Timer() as timer:
+    with Timer():
         # Code to be timed here
-    print(f"Elapsed time: {timer.elapsed_time()} _seconds")
     """
 
     def __enter__(self):
@@ -58,25 +62,22 @@ class Timer:
         to the console in green if the process completed successfully, and
         in red if an exception was raised.
         """
+        elapsed = self._elapsed_time()
 
-        print(colorama.Fore.GREEN, end="")
         if exc_type is not None:
-            print(colorama.Fore.RED + f"Process exited with an exception: {exc_val}")
+            print(
+                colorama.Fore.RED
+                + f"Process exited with an exception: {exc_val} for {elapsed}"
+            )
 
         print(
-            f"Process finished with {self._elapsed_time()} seconds"
+            colorama.Fore.GREEN
+            + f"Process finished for {elapsed}"
             + colorama.Style.RESET_ALL
         )
 
     def _elapsed_time(self):
-        return (datetime.datetime.now() - self.start_time).total_seconds()
-
-    def __call__(self, func: Callable):
-        def wrapper(*args, **kwargs):
-            with self:
-                return func(*args, **kwargs)
-
-        return wrapper
+        return datetime.datetime.now() - self.start_time
 
 
 def print_info(message: str, method: Callable = len, color: colorama = "CYAN"):
