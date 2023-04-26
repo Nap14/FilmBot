@@ -43,7 +43,7 @@ def get_dubbing(dubbings: list) -> list[Dubbing]:
     return all_dubbings
 
 
-@print_info(message="was added to queue", color="white", method=lambda m: m)
+@print_info(message="was added to queue", color="white", method=lambda m: m.name)
 def add_movie_maker_to_database(movie_maker: dict, save: bool = True) -> MovieMaker:
     """
     Add a new MovieMaker object to the database based on the given dictionary.
@@ -74,7 +74,7 @@ def add_movie_maker_to_database(movie_maker: dict, save: bool = True) -> MovieMa
 
         # Add Profession objects to MovieMaker object
         [movie_maker_obj.profession.add(prof) for prof in professions]
-        print("and was saved")
+        print(colorama.Fore.GREEN + "and was saved" + colorama.Style.RESET_ALL)
 
     return movie_maker_obj
 
@@ -202,7 +202,7 @@ def parse_films(
                 print(colorama.Fore.RED + str(e) + colorama.Style.RESET_ALL)
                 if errors > stop_limit:
                     raise Exception(
-                        "Congratulation you parse all films 10 last pages was return without response"
+                        f"{stop_limit} last pages was returns without response"
                     )
                 continue
             except AttributeError:
@@ -253,4 +253,4 @@ def main(*args, **kwargs):
 
 
 if __name__ == "__main__":
-    main(57_000, 60_000)
+    pass
