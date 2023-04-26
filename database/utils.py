@@ -29,6 +29,13 @@ class ExceptionHandler:
             + colorama.Style.RESET_ALL
         )
 
+    def __call__(self, func: Callable) -> Callable:
+        def wrapper(*args, **kwargs):
+            with self:
+                return func(*args, **kwargs)
+
+        return wrapper
+
 
 class Timer:
     """
@@ -57,26 +64,33 @@ class Timer:
             print(colorama.Fore.RED + f"Process exited with an exception: {exc_val}")
 
         print(
-            f"Process finished with {self.elapsed_time()} _seconds"
+            f"Process finished with {self._elapsed_time()} seconds"
             + colorama.Style.RESET_ALL
         )
 
-    def elapsed_time(self):
+    def _elapsed_time(self):
         return (datetime.datetime.now() - self.start_time).total_seconds()
+
+    def __call__(self, func: Callable):
+        def wrapper(*args, **kwargs):
+            with self:
+                return func(*args, **kwargs)
+
+        return wrapper
 
 
 def print_info(message: str, method: Callable = len, color: colorama = "CYAN"):
     """
-       Decorator function that prints information about the result of a function call.
+    Decorator function that prints information about the result of a function call.
 
-       Arguments:
-       - message (str): the message that will be printed along with the result of the function call
+    Arguments:
+    - message (str): the message that will be printed along with the result of the function call
 
-       Optional arguments:
-       - method (Callable): a callable object that will be used to process the result of the function call
-         (default: len, which returns the length of the object)
-       - color (colorama): the color that will be used to print the message (default: CYAN)
-       """
+    Optional arguments:
+    - method (Callable): a callable object that will be used to process the result of the function call
+      (default: len, which returns the length of the object)
+    - color (colorama): the color that will be used to print the message (default: CYAN)
+    """
 
     try:
         color = getattr(colorama.Fore, color.upper())
@@ -89,13 +103,9 @@ def print_info(message: str, method: Callable = len, color: colorama = "CYAN"):
     def decorator(func: callable):
         def wrapper(*args, **kwargs):
             result = func(*args, **kwargs)
-            print(
-                color
-                + f"{method(result)} {message}"
-                + colorama.Style.RESET_ALL
-            )
+            print(color + f"{method(result)} {message}" + colorama.Style.RESET_ALL)
             return result
 
         return wrapper
-    return decorator
 
+    return decorator
