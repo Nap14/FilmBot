@@ -1,5 +1,6 @@
 import datetime
 import threading
+from typing import Callable
 
 import colorama
 import requests
@@ -72,17 +73,39 @@ class Timer:
         return (datetime.datetime.now() - self.start_time).total_seconds()
 
 
-def print_info(func: callable):
-    def wrapper(*args, **kwargs):
-        result = func(*args, **kwargs)
-        print(
-            colorama.Fore.CYAN
-            + f"{len(result)} makers was added to db"
-            + colorama.Style.RESET_ALL
-        )
-        return result
+def print_info(message: str, method: Callable = len, color: colorama = "CYAN"):
+    """
+       Decorator function that prints information about the result of a function call.
 
-    return wrapper
+       Arguments:
+       - message (str): the message that will be printed along with the result of the function call
+
+       Optional arguments:
+       - method (Callable): a callable object that will be used to process the result of the function call
+         (default: len, which returns the length of the object)
+       - color (colorama): the color that will be used to print the message (default: CYAN)
+       """
+
+    try:
+        color = getattr(colorama.Fore, color.upper())
+    except AttributeError:
+        raise ValueError(f"Invalid color name: {color}")
+
+    if not callable(method):
+        raise ValueError("Method argument must be callable.")
+
+    def decorator(func: callable):
+        def wrapper(*args, **kwargs):
+            result = func(*args, **kwargs)
+            print(
+                color
+                + f"{method(result)} {message}"
+                + colorama.Style.RESET_ALL
+            )
+            return result
+
+        return wrapper
+    return decorator
 
 
 def get_dubbing(dubbings: list) -> [Dubbing]:
@@ -154,7 +177,7 @@ def add_movie_maker_to_database(movie_maker: dict, save: bool = True):
     return movie_maker_obj
 
 
-@print_info
+@print_info(message="makers was added to db")
 def save_movie_makers(makers: list):
     """
     Bulk create new moviemakers in the database and return a list of makers.
@@ -287,7 +310,7 @@ def parse_films(
                 films.clear()
 
     except Exception as e:
-        print(e)
+        print(colorama.Fore.RED + str(e) + colorama.Style.RESET_ALL)
         raise
     finally:
         get_movie_makers(makers)
@@ -313,9 +336,9 @@ def add_films(films, start: int = 0):
     )
 
 
-def main(*args):
+def main(*args, **kwargs):
     with Timer(), ExceptionHandler():
-        parse_films(*args)
+        parse_films(*args, **kwargs)
 
 
 if __name__ == "__main__":
