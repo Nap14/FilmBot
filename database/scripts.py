@@ -178,13 +178,22 @@ def add_films(films, start: int = 0):
 @Timer()
 @ExceptionHandler()
 def parse_films(
-    start: int = 1, stop: int = None, ids: list[int] = None, stop_limit: int = 10
+    start: int = 1,
+    stop: int = None,
+    count: int = 1000,
+    ids: list[int] = None,
+    stop_limit: int = 10
 ):
     films = []
     makers = []
     thread = None
     errors = 0
-    if not ids:
+
+    if ids is None:
+
+        if stop is None:
+            stop = start + count
+
         ids = range(start, stop)
 
     try:
@@ -206,7 +215,9 @@ def parse_films(
                     )
                 continue
             except AttributeError:
+                print("bad parser")
                 continue
+
             films.append(movie)
             print(f"{movie['name']} was add to queue")
             sleep(1)
@@ -246,6 +257,14 @@ def get_empty_ids():
     all_ids = set(range(1, max(used_ids)))
 
     return sorted(all_ids - used_ids)
+
+
+def get_last_film(order_by: str = "external_id", desc=False):
+
+    if desc:
+        order_by = "-" + order_by
+
+    return Film.objects.order_by(order_by).first()
 
 
 def main(*args, **kwargs):
