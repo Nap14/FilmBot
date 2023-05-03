@@ -259,7 +259,7 @@ def get_empty_ids():
     return sorted(all_ids - used_ids)
 
 
-def get_last_film(order_by: str = "external_id", desc=False):
+def get_last_film(order_by: str = "external_id", desc=True):
 
     if desc:
         order_by = "-" + order_by
